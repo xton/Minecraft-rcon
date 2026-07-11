@@ -97,6 +97,14 @@ suite('completionEngine: applySuggestion (splicing a candidate into the typed li
       'candidate shorter than and unrelated to what was typed — appends',
       '/gamemode survival @a', 'x', '/gamemode survival @ax'
     ],
+    [
+      'resource-location substring match not anchored at the candidate start — replaces the whole typed word, not just append',
+      '/summon all', 'minecraft:allay', '/summon minecraft:allay'
+    ],
+    [
+      'resource-location match casefolds — replaces the whole typed word regardless of case',
+      '/summon MIN', 'minecraft:pig', '/summon minecraft:pig'
+    ],
   ];
 
   for (const [description, line, suggestion, expected] of cases) {
