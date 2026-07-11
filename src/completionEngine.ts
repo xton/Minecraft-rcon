@@ -16,9 +16,9 @@ import { buildCompletionsQuery, buildUsageQuery } from './completionQueries';
 // ───────────────────────── completion-list helpers ─────────────────────────
 
 /**
- * Splices a raw completion candidate (e.g. "adventure", "distance=", "[")
- * into the line as typed so far, the same way a real client reconciles a
- * server-suggested replacement against partial input.
+ * Splices a raw completion candidate (e.g. "adventure", "distance=",
+ * "minecraft:allay", "[") into the line as typed so far, the same way a real
+ * client reconciles a server-suggested replacement against partial input.
  *
  * The server only ever hands back the candidate text — never which part of
  * the line it replaces — and that part isn't reliably "the last
@@ -28,18 +28,29 @@ import { buildCompletionsQuery, buildUsageQuery } from './completionQueries';
  * "@a" and getting "[" appended makes "@a[", where nothing of "@a" overlaps
  * the candidate at all).
  *
- * So instead of guessing where the word boundary is, this finds the longest
- * suffix of what's typed that the candidate continues (a prefix-overlap,
- * checked longest-first so e.g. "dist" wins over the shorter-but-also-
- * matching "t"), and splices the candidate in over just that overlap. An
- * overlap of zero naturally degrades to appending — exactly right for
- * refinement suggestions ("@a" + "[") and for completions chosen right after
- * a trailing space ("adventure " + "@a").
+ * Resource-location arguments (entity types for `/summon`, item ids, ...)
+ * add two more wrinkles: Brigadier matches them case-insensitively, and as a
+ * substring anywhere in the id, not just a prefix — typing "all" matches
+ * "minecraft:allay" (a substring of the *path*, not a prefix of the full
+ * "minecraft:allay"), and typing "MIN" matches "minecraft:pig" regardless of
+ * case. So instead of requiring what's typed to be a case-sensitive prefix
+ * of the candidate, this finds the longest suffix of what's typed that
+ * occurs (case-insensitively) anywhere in the candidate — checked
+ * longest-first so e.g. "dist" wins over the shorter-but-also-matching "t" —
+ * and splices the candidate in over just that overlap. Candidates are always
+ * a single token with no embedded spaces, so a suffix that crosses a space
+ * boundary can never spuriously match one, which keeps this from reaching
+ * back into an already-complete earlier word. An overlap of zero naturally
+ * degrades to appending — exactly right for refinement suggestions ("@a" +
+ * "[") and for completions chosen right after a trailing space
+ * ("adventure " + "@a").
  */
 export function applySuggestion(line: string, suggestionText: string): string {
+  const lowerLine = line.toLowerCase();
+  const lowerSuggestion = suggestionText.toLowerCase();
   let overlap = 0;
   for (let len = Math.min(line.length, suggestionText.length); len > 0; len--) {
-    if (suggestionText.startsWith(line.slice(line.length - len))) {
+    if (lowerSuggestion.includes(lowerLine.slice(lowerLine.length - len))) {
       overlap = len;
       break;
     }
