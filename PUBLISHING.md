@@ -67,6 +67,13 @@ already produces a clean 33-file / 94 kB tarball.
 
 ## 3. Publish to the VS Code Marketplace
 
+> **Status (2026-07):** the VS Code Marketplace itself is **blocked** — publisher
+> creation is rejected by Microsoft's anti-fraud filter
+> (`PublisherSpamValidationException`) at the identity level, and support has
+> declined to clear it (see "Create a publisher" below). **Open VSX is the
+> working VS-Code-family channel** in the meantime; the Marketplace steps stay
+> here for whenever/if Microsoft clears the flag.
+
 The Marketplace is run through Azure DevOps; the steps are:
 
 - [ ] **Create a publisher**: sign in at
@@ -100,10 +107,26 @@ The Marketplace is run through Azure DevOps; the steps are:
   (above), then add the PAT as the `VSCE_PAT` secret. For a one-off local
   publish instead: `npm i -g @vscode/vsce` → `vsce package` → install the
   `.vsix` locally as a final check → `vsce login christondewan` → `vsce publish`.
-- [x] **Also publish to Open VSX** (CI) — `release.yml` runs `npx ovsx publish`
-  when an `OVSX_TOKEN` repo secret is present. Open VSX serves VSCodium,
-  Gitpod, and many Cursor/forks setups. Remaining manual step: create an
-  open-vsx.org access token and add it as `OVSX_TOKEN`.
+- [ ] **Publish to Open VSX** — *the working VS-Code-family channel.* With the
+  Marketplace publisher blocked (see the "Create a publisher" note), Open VSX is
+  where the extension actually ships: it authenticates via **GitHub (no
+  Microsoft)**, serves VSCodium, Gitpod, and Cursor/other forks, and VS
+  Code-proper users can sideload the `.vsix` from the GitHub Release. The
+  namespace is `christondewan` (must equal `publisher` in package.json).
+  `release.yml` publishes automatically once `OVSX_TOKEN` is set; do the first
+  publish by hand to confirm the listing, then let CI take over. One-time setup:
+    1. Sign in at https://open-vsx.org with GitHub, and accept the Eclipse
+       Foundation Publisher Agreement when prompted (Profile → Settings).
+    2. Generate a token: **Settings → Access Tokens → Generate New Token**.
+    3. Claim the namespace (once): `npx ovsx create-namespace christondewan -p <token>`.
+    4. Build and do the first publish locally as a sanity check:
+       `npx @vscode/vsce package` → `npx ovsx publish minercon-3.0.4.vsix -p <token>`.
+       Verify the listing renders at `https://open-vsx.org/extension/christondewan/minercon`.
+    5. Hands-off releases: add the token as the `OVSX_TOKEN` repo secret. Every
+       `v*` tag then runs `ovsx create-namespace` (no-op) + `ovsx publish` in
+       `release.yml`. (`vsce verify-pat`-style check: `npx ovsx verify-pat christondewan -p <token>`.)
+    - Optional: request namespace **ownership/verification** on Open VSX so the
+      listing shows as verified and only you can publish to it.
 - [x] README *is* the listing page — the demo GIF sits near the top and now
   uses an absolute `raw.githubusercontent.com` URL (Marketplace can't resolve
   repo-relative paths for some setups). Verify the rendered listing page after
